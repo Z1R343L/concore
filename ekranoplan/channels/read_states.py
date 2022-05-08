@@ -85,9 +85,6 @@ class ReadStates(Controller):
 
         _readstates = ReadState.objects(ReadState.id == me.id).all()
 
-        readstates = []
-
-        for readstate in _readstates:
-            readstates.append(to_dict(readstate))
+        readstates = [to_dict(readstate) for readstate in _readstates]
 
         return jsonify(readstates)

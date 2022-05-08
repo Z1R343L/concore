@@ -19,11 +19,12 @@ def upload(name: str, folder: str, obj: bytes, content_type: str):
     s3.upload_fileobj(
         obj,
         'cdn.concord.chat',
-        folder + '/' + name,
+        f'{folder}/{name}',
         ExtraArgs={
             'ContentType': content_type or 'binary/octet-stream',
             'ACL': 'public-read',
         },
     )
+
 
     del s3

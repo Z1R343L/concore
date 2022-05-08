@@ -44,7 +44,9 @@ dotenv.load_dotenv()
 @app.route('/auth/fingerprint')
 async def uuid():
     return jsonify(
-        {'fingerprint': str(factory().formulate()) + '.' + secrets.token_urlsafe(16)}
+        {
+            'fingerprint': f'{str(factory().formulate())}.{secrets.token_urlsafe(16)}'
+        }
     )
 
 
@@ -64,11 +66,7 @@ async def get_guild_by_invite(invite_code: str, request: Request):
 
     data = await request.json(orjson.loads)
 
-    if data is not None:
-        accept = bool(data.get('accept', False))
-    else:
-        accept = False
-
+    accept = bool(data.get('accept', False)) if data is not None else False
     guild: Guild = Guild.objects(Guild.id == invite.guild_id).get()
 
     if not accept:

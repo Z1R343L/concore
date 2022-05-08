@@ -30,10 +30,7 @@ class MemberController(Controller):
         _, _ = validate_member(token=auth.value, guild_id=guild_id)
 
         members = Member.objects(Member.guild_id == guild_id).allow_filtering().all()
-        ret = []
-
-        for member in members:
-            ret.append(to_dict(member))
+        ret = [to_dict(member) for member in members]
 
         return jsonify(ret)
 

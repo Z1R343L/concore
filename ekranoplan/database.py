@@ -10,7 +10,10 @@ from cassandra.cqlengine import columns, connection, management, models, usertyp
 
 dotenv.load_dotenv()
 
-cloud = {'secure_connect_bundle': os.getcwd() + r'/ekranoplan/static/bundle.zip'}
+cloud = {
+    'secure_connect_bundle': f'{os.getcwd()}/ekranoplan/static/bundle.zip'
+}
+
 auth_provider = PlainTextAuthProvider(
     os.getenv('client_id'), os.getenv('client_secret')
 )
@@ -304,7 +307,7 @@ def to_dict(model: models.Model, _keep_email=False) -> dict:
             # user was deleted
             ret['user'] = None
 
-    if type(model).__name__ == 'Message':
+    elif type(model).__name__ == 'Message':
         try:
             ret['author'] = to_dict(
                 User.objects(
@@ -316,7 +319,7 @@ def to_dict(model: models.Model, _keep_email=False) -> dict:
             # author was deleted
             ret['author'] = None
 
-    if type(model).__name__ == 'Webhook':
+    elif type(model).__name__ == 'Webhook':
         ret.pop('token')
         ret.pop('guild_id')
 

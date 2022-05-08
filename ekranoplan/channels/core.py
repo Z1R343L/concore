@@ -30,7 +30,7 @@ class ChannelCore(Controller):
 
         guild: Guild = Guild.objects(Guild.id == guild_id).get()
 
-        if guild == None:
+        if guild is None:
             raise NotFound()
 
         permissions = None
@@ -141,8 +141,6 @@ class ChannelCore(Controller):
 
         data: dict = await request.json(orjson.loads)
         _overwrites = get_channel_overwrites(channel_id=channel_id)
-        overwrites = []
-
         if data.get('name'):
             channel.name = str(data.pop('name'))[:45]
 
@@ -154,9 +152,10 @@ class ChannelCore(Controller):
 
         if data.get('permission_overwrites'):
             permission_overwrites = list(data.pop('permission_overwrites'))
-            poverwrites = []
-            for overwrite in permission_overwrites:
-                poverwrites.append(verify_permission_overwrite(dict(overwrite)))
+            poverwrites = [
+                verify_permission_overwrite(dict(overwrite))
+                for overwrite in permission_overwrites
+            ]
 
             for overwrite in poverwrites:
                 allow = overwrite['allow']
@@ -202,8 +201,7 @@ class ChannelCore(Controller):
 
         channel = channel.save()
         data = to_dict(channel)
-        for overwrite in _overwrites:
-            overwrites.append(to_dict(overwrite))
+        overwrites = [to_dict(overwrite) for overwrite in _overwrites]
         data['permission_overwrites'] = overwrites
 
         await channel_event(
@@ -246,9 +244,6 @@ class ChannelCore(Controller):
         channels_ = GuildChannel.objects(
             GuildChannel.guild_id == guild_id
         ).all()
-        channels = []
-
-        for channel in channels_:
-            channels.append(to_dict(channel))
+        channels = [to_dict(channel) for channel in channels_]
 
         return jsonify(channels)
