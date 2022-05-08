@@ -22,7 +22,7 @@ class CoreUsers(Controller):
     async def get_me(self, auth: AuthHeader):
         me = validate_user(auth.value)
 
-        if me.locale == 'EN_US' or me.locale == 'en_US':
+        if me.locale in ['EN_US', 'en_US']:
             me.locale = 'en-US'
             me.save()
 
@@ -48,7 +48,7 @@ class CoreUsers(Controller):
         if user.bot:
             ret['pronouns'] = 'Attack Helicopter/AttkHeli'
 
-        if user.locale == 'EN_US' or user.locale == 'en_US':
+        if user.locale in ['EN_US', 'en_US']:
             user.locale = 'en-US'
             user.save()
 

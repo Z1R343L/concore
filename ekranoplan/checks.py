@@ -38,9 +38,8 @@ load_dotenv()
 def validate_user(token: str, stop_bots: bool = False) -> User:
     user = verify_token(token=token)
 
-    if stop_bots:
-        if user.bot:
-            raise Forbidden()
+    if stop_bots and user.bot:
+        raise Forbidden()
 
     return user
 
@@ -73,17 +72,15 @@ def validate_admin(token: str):
 def get_member_permissions(
     member: Member,
 ):
-    if list(member.roles) == []:
+    if not list(member.roles):
         guild: Guild = Guild.objects(Guild.id == member.guild_id).get()
-        permissions = GuildPermissions(guild.permissions)
+        return GuildPermissions(guild.permissions)
     else:
         role_id: int = list(member.roles)[0]
 
         role: Role = Role.objects(role_id).get()
 
-        permissions = GuildPermissions(role.permissions)
-
-    return permissions
+        return GuildPermissions(role.permissions)
 
 
 def validate_channel(
@@ -103,64 +100,58 @@ def validate_channel(
     except (query.DoesNotExist):
         raise NotFound()
 
-    if permission is None:
+    if permission is not None:
+        return member, user, channel, None
+    if member.owner:
+        return member, user, channel, None
 
-        if member.owner:
-            return member, user, channel, None
+    try:
+        overwrite: PermissionOverWrites = PermissionOverWrites.objects(
+            PermissionOverWrites.channel_id == channel_id,
+            PermissionOverWrites.user_id == member.id,
+        ).get()
+        user_found = True
+        allow_permissions = GuildPermissions(overwrite.allow)
+        disallow_permissions = GuildPermissions(overwrite.deny)
+    except:
+        user_found = False
 
-        try:
-            overwrite: PermissionOverWrites = PermissionOverWrites.objects(
-                PermissionOverWrites.channel_id == channel_id,
-                PermissionOverWrites.user_id == member.id,
-            ).get()
-            user_found = True
-            allow_permissions = GuildPermissions(overwrite.allow)
-            disallow_permissions = GuildPermissions(overwrite.deny)
-        except:
-            user_found = False
+    if not user_found:
+        if list(member.roles):
+            role_id: int = list(member.roles)[0]
 
-        if not user_found:
-            if list(member.roles) == []:
-                guild: Guild = Guild.objects(Guild.id == guild_id).get()
-                permissions = GuildPermissions(guild.permissions)
-            else:
-                role_id: int = list(member.roles)[0]
+            role: Role = Role.objects(role_id).get()
 
-                role: Role = Role.objects(role_id).get()
+            permissions = GuildPermissions(role.permissions)
 
-                permissions = GuildPermissions(role.permissions)
+        else:
+            guild: Guild = Guild.objects(Guild.id == guild_id).get()
+            permissions = GuildPermissions(guild.permissions)
+        if permissions.administator:
+            return member, user, channel, permissions
 
-            if permissions.administator:
-                return member, user, channel, permissions
-
-            if isinstance(permission, list):
-                for perm in permission:
-                    if not getattr(permissions, perm):
-                        raise Forbidden()
-            else:
+        if isinstance(permission, list):
+            for perm in permission:
                 if not getattr(permissions, perm):
                     raise Forbidden()
+        elif not getattr(permissions, perm):
+            raise Forbidden()
 
-            return member, user, channel, permissions
-        else:
-            if isinstance(permission, list):
-                for perm in permission:
-                    if getattr(disallow_permissions, perm):
-                        raise Forbidden()
+    elif isinstance(permission, list):
+        for perm in permission:
+            if getattr(disallow_permissions, perm):
+                raise Forbidden()
 
-                    if not getattr(allow_permissions, perm):
-                        raise Forbidden()
-            else:
-                if getattr(disallow_permissions, permission):
-                    raise Forbidden()
-
-                if not getattr(allow_permissions, permission):
-                    raise Forbidden()
-
-            return member, user, channel, permissions
-
+            if not getattr(allow_permissions, perm):
+                raise Forbidden()
     else:
-        return member, user, channel, None
+        if getattr(disallow_permissions, permission):
+            raise Forbidden()
+
+        if not getattr(allow_permissions, permission):
+            raise Forbidden()
+
+    return member, user, channel, permissions
 
 
 def search_messages(
@@ -274,13 +265,11 @@ def get_cat_channels(category: GuildChannel, _add_one: bool = False):
 
 
 def verify_permission_overwrite(d: dict):
-    data = {
+    return {
         'user_id': d['user_id'],
         'allow': str(d['allow']) if d['allow'] is not None else '0',
         'deny': str(d['deny']) if d['deny'] is not None else '0',
     }
-
-    return data
 
 
 def verify_slowmode(user_id: int, channel_id: int):
@@ -327,17 +316,11 @@ def modify_member_roles(guild_id: int, member: Member, changed_roles: list):
         if role not in rroles:
             raise BadData()
 
-        for role_ in roles:
-            if role_.id == role:
-                croles.append(role_)
-
+        croles.extend(role_ for role_ in roles if role_.id == role)
     mroles = []
 
     for _role in member.roles:
-        for role in roles:
-            if role.id == _role:
-                mroles.append(role)
-
+        mroles.extend(role for role in roles if role.id == _role)
     for role in mroles:
         for role_ in croles:
             if role_.position > role.position:
@@ -347,19 +330,20 @@ def modify_member_roles(guild_id: int, member: Member, changed_roles: list):
 
 
 def upload_image(image: str, location: str) -> str:
-    image = str(image)
+    image = image
     duri = datauri.DataURI(image)
 
-    if not str(duri.mimetype.startswith('image/')) or str(duri.mimetype) not in [
+    if str(duri.mimetype.startswith('image/')) and str(duri.mimetype) in {
         'image/png',
         'image/jpeg',
         'image/gif',
-    ]:
-        return ''
-    else:
-        pfp_id = str(uuid.uuid1()) + '.' + duri.mimetype.split('/')[1]
+    }:
+        pfp_id = f'{str(uuid.uuid1())}.' + duri.mimetype.split('/')[1]
         upload(pfp_id, location, BytesIO(duri.data), str(duri.mimetype))
         return pfp_id
+
+    else:
+        return ''
 
 
 def channels_valid(channel_ids: list, guild_id: int):
@@ -425,7 +409,7 @@ def audit(
     object_id: int = 0,
     user_id: int = 0,
 ):
-    audit: Audit = Audit.create(
+    return Audit.create(
         guild_id=guild_id,
         audited=audited,
         auditor=user_id,
@@ -434,8 +418,6 @@ def audit(
         postmortem=postmortem,
         audit_id=factory().formulate(),
     )
-
-    return audit
 
 
 def verify_email(email: str):
@@ -448,7 +430,8 @@ def verify_email(email: str):
 
 
 def send_verification(email: str, username: str, code: int):
-    body = f'Hey {username},\nThanks for registering an account on Concord! We\'re just here to verify this is you, in your client fill in the code:\n\n{str(code)}'
+    body = f"Hey {username},\nThanks for registering an account on Concord! We're just here to verify this is you, in your client fill in the code:\n\n{code}"
+
 
     # create the email
     audit = multipart.MIMEMultipart()

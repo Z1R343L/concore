@@ -21,10 +21,7 @@ class AuditLogger(Controller):
 
         audits_ = Audit.objects(Audit.guild_id == guild_id).all()
 
-        audits = []
-
-        for audit in audits_:
-            audits.append(to_dict(audit))
+        audits = [to_dict(audit) for audit in audits_]
 
         return jsonify(audits)
 

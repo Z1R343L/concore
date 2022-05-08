@@ -7,10 +7,7 @@ from .errors import NotFound
 # TODO: Raise when we get to ~100,000 Guilds.
 CURVE = 30
 
-rollouts = {
-    # completed rollout
-    0: [i for i in range(CURVE)]
-}
+rollouts = {0: list(range(CURVE))}
 
 def can_use_feature(
     guild_id: int,

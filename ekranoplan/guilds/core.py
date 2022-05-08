@@ -86,8 +86,7 @@ class GuildsCore(Controller):
 
         guild = Guild.create(**inserted_data)
         member = Member.create(**original_member)
-        channels = []
-        channels.append(to_dict(GuildChannel.create(**default_category_channel)))
+        channels = [to_dict(GuildChannel.create(**default_category_channel))]
         channels.append(to_dict(GuildChannel.create(**default_text_channel)))
 
         guild = to_dict(guild)
@@ -251,10 +250,7 @@ class GuildsCore(Controller):
             .allow_filtering()
             .all()
         )
-        guild_invites = []
-
-        for invite in _guild_invites:
-            guild_invites.append(to_dict(invite))
+        guild_invites = [to_dict(invite) for invite in _guild_invites]
 
         return jsonify(guild_invites)
 

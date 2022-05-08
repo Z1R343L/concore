@@ -72,9 +72,7 @@ class GuildMessages(Controller):
         msgs = []
 
         for msgobj in _msgs:
-            for msg in msgobj:
-                msgs.append(to_dict(msg))
-
+            msgs.extend(to_dict(msg) for msg in msgobj)
         return jsonify(msgs)
 
     @post(
@@ -103,7 +101,7 @@ class GuildMessages(Controller):
         d: dict = await request.json(orjson.loads)
 
         if '@everyone' in d['content']:
-            mentions_everyone = True if perms.mention_everyone else False
+            mentions_everyone = bool(perms.mention_everyone)
         else:
             mentions_everyone = False
 
@@ -141,7 +139,7 @@ class GuildMessages(Controller):
         if msg.mentions_everyone:
             pm += '- This Message Mentioned `@everyone`\n'
 
-        pm += f'- Message Content is `{str(len(msg.content))}` lines long'
+        pm += f'- Message Content is `{len(msg.content)}` lines long'
 
         audit(
             'MESSAGE_CREATE',
